@@ -27,7 +27,6 @@ public class Scores {
             }
         } catch (IOException e) {
         	return;
-            //e.printStackTrace();
         }
 	}
 	

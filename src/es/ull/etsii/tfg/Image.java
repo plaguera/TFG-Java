@@ -4,6 +4,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,26 +67,82 @@ public class Image {
 		ConceptScores.get(concept).add(value);
 	}
 	
+	public int ConceptCount() {
+		return ConceptScores.size();
+	}
+	
+	public static double Difference(String imageA, String imageB) {
+		return Difference(Instance(imageA), Instance(imageB));
+	}
+	
 	public static double Difference(Image imageA, Image imageB) {
+		return Difference1(imageA, imageB);
+	}
+	
+	public static double Difference1(Image imageA, Image imageB) {
 		Map<String, List<Integer>> a = imageA.ConceptScores, b = imageB.ConceptScores;
-		Set<String> setA = a.keySet().stream().collect(Collectors.toSet()),
-					setB = b.keySet().stream().collect(Collectors.toSet());
-		
-		setA.removeAll(b.keySet());
-		setB.removeAll(a.keySet());
-		
-		double dif = - setA.size() - setB.size();
-		
 		Set<String> common = a.keySet().stream().collect(Collectors.toSet());
 		common.retainAll(b.keySet());
 		
+		double dif = (a.size() - common.size()) + (b.size() - common.size());
 		for (String i : common) {
-			double averageA = (double) a.get(i).stream().mapToInt(Integer::intValue).sum() / (double) a.get(i).size();
-			double averageB = (double) b.get(i).stream().mapToInt(Integer::intValue).sum() / (double) b.get(i).size();
+			double averageA = Mean(a.get(i));
+			double averageB = Mean(b.get(i));
 			dif += Math.abs(averageA - averageB);
 		}
 		
 		return dif;
 	}
-
+	
+	public static double Mean(List<Integer> list) {
+		double sum = 0, total = list.size();
+		for (int i : list) sum += i;
+		return sum / total;
+	}
+	
+	public static double Difference2(Image imageA, Image imageB) {
+		Map<String, List<Integer>> a = imageA.ConceptScores, b = imageB.ConceptScores;
+		Set<String> common = a.keySet().stream().collect(Collectors.toSet());
+		common.retainAll(b.keySet());
+		
+		double dif = (a.size() - common.size()) + (b.size() - common.size());
+		for (String i : common) {
+			double averageA = Mean(a.get(i));
+			double averageB = Mean(b.get(i));
+			
+			double sumA = 0d, sumB = 0d;
+			for (int j : a.get(i))
+				sumA += Math.pow(j - averageA, 2);
+			for (int j : b.get(i))
+				sumB += Math.pow(j - averageB, 2);
+			
+			double varianceA = sumA / averageA;
+			double varianceB = sumB / averageB;
+			if (Double.isNaN(varianceA)) varianceA = 0d;
+			if (Double.isNaN(varianceB)) varianceB = 0d;
+			dif += Math.abs(varianceA - varianceB);
+		}
+		return dif;
+	}
+	
+	public static double Difference3(Image imageA, Image imageB) {
+		Map<String, List<Integer>> a = imageA.ConceptScores, b = imageB.ConceptScores;
+		Set<String> common = a.keySet().stream().collect(Collectors.toSet());
+		common.retainAll(b.keySet());
+		
+		double dif = (a.size() - common.size()) + (b.size() - common.size());
+		for (String i : common)
+			dif += Math.abs(Mode(a.get(i)) - Mode(b.get(i)));
+		return dif;
+	}
+	
+	public static int Mode(List<Integer> list) {
+		Map<Integer, Integer> count = new HashMap<Integer,Integer>();
+		
+		for (int i : list)
+			if (!count.containsKey(i))
+				count.put(i, Collections.frequency(list, i));
+		
+		return Collections.max(count.entrySet(), Comparator.comparingInt(Map.Entry::getValue)).getKey();
+	}
 }

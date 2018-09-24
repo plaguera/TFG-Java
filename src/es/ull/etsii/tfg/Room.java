@@ -1,6 +1,8 @@
 package es.ull.etsii.tfg;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,21 +17,50 @@ public class Room {
 		return aux;
 	}
 	
-	public static final int IMAGES_PER_PLAYER = 5;
+	public static final int IMAGES_PER_PLAYER = 10;
 	public long ID;
 	public Map<String, List<String>> DealtHands = new HashMap<String, List<String>>();
 	
 	Room(long id, List<String> players) {
 		ID = id;
-		int index = 0;
+		List<Image> aux = new ArrayList<Image>(Image.Instances);
+		Map<String, String> initials = new HashMap<String, String>();
 		for (String player : players) {
-			List<String> aux = new ArrayList<String>();
-			for (int i = 0; i < IMAGES_PER_PLAYER; i++)
-				aux.add(Image.Instances.get(index * IMAGES_PER_PLAYER + i).name);
-			DealtHands.put(player, aux);
-			index++;
+			Image min = Collections.min(aux, Comparator.comparing(s -> s.ConceptCount()));
+			aux.remove(min);
+			initials.put(player, min.name);
+			DealtHands.put(player, new ArrayList<String>());
+			DealtHands.get(player).add(min.name);
 		}
-		//System.out.println(toString());
+		
+		Map<String, Map<String, Double>> distances = new HashMap<String, Map<String, Double>>();
+		for (String image : initials.values()) {
+			Map<String, Double> tmp = new HashMap<String, Double>();
+			for (Image other : aux) {
+				tmp.put(other.name, Image.Difference(image, other.name));
+			}
+			distances.put(image, tmp);
+		}
+		while (!AllHaveCards()) {
+			for (String player : players) {
+				for (String other : players) {
+					if (!player.equals(other)) {
+						String max = Collections.max(distances.get(initials.get(player)).entrySet(), Comparator.comparingDouble(Map.Entry::getValue)).getKey();
+						for (Map.Entry<String, Map<String, Double>> j : distances.entrySet())
+							j.getValue().remove(max);
+						DealtHands.get(player).add(max);
+					}
+				}
+			}
+		}
+		
+	}
+	
+	boolean AllHaveCards() {
+		for (Map.Entry<String, List<String>> i : DealtHands.entrySet())
+			if (i.getValue().size() < IMAGES_PER_PLAYER)
+				return false;
+		return true;
 	}
 	
 	public String pack() {
